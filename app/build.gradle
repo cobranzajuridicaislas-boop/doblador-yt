@@ -34,7 +34,7 @@ dependencies {
     implementation 'com.google.mlkit:translate:17.0.3'
 
     // Extraccion de audio de YouTube (open source, sin API de pago)
-    implementation implementation 'com.github.TeamNewPipe:NewPipeExtractor:v0.24.8'
+    implementation 'com.github.TeamNewPipe:NewPipeExtractor:v0.24.8'
 
     // Cliente HTTP usado por el extractor
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
