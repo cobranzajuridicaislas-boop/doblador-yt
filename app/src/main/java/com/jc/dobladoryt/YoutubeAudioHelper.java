@@ -97,8 +97,8 @@ public class YoutubeAudioHelper {
 
             callback.onSuccess(mejor.getContent(), info.getName());
 
-        } catch (Exception e) {
-            callback.onError("Error al extraer audio: " + e.getMessage());
+        } catch (Throwable e) {
+            callback.onError("Error al extraer audio: " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
 }
