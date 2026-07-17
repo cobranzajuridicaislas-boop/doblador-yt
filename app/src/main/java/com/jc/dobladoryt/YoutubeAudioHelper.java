@@ -1,5 +1,7 @@
 package com.jc.dobladoryt;
 
+import android.content.Context;
+
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.ServiceList;
 import org.schabi.newpipe.extractor.stream.AudioStream;
@@ -9,6 +11,8 @@ import org.schabi.newpipe.extractor.downloader.Downloader;
 import org.schabi.newpipe.extractor.downloader.Request;
 import org.schabi.newpipe.extractor.downloader.Response;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -37,6 +41,18 @@ public class YoutubeAudioHelper {
     public interface Callback {
         void onSuccess(String audioUrl, String videoTitle);
         void onError(String mensaje);
+    }
+
+    /** Escribe un punto de control en disco de inmediato, para poder ver hasta donde llego el proceso si la app muere sin avisar. */
+    public static void escribirProgreso(Context context, String mensaje) {
+        try {
+            File archivo = new File(context.getFilesDir(), "progreso.txt");
+            try (FileWriter fw = new FileWriter(archivo, true)) {
+                fw.write(System.currentTimeMillis() + " - " + mensaje + "\n");
+                fw.flush();
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     /** Inicializa NewPipe con un Downloader basado en OkHttp (solo una vez). */
@@ -72,15 +88,21 @@ public class YoutubeAudioHelper {
      * Extrae la mejor URL de audio disponible para el link dado.
      * Se ejecuta en un hilo aparte (usar desde un Thread/Executor, nunca en el hilo principal).
      */
-    public static void extraerAudio(String youtubeUrl, Callback callback) {
+    public static void extraerAudio(Context context, String youtubeUrl, Callback callback) {
         try {
+            escribirProgreso(context, "1. Iniciando NewPipe");
             initNewPipe();
+            escribirProgreso(context, "2. NewPipe inicializado. Creando extractor");
             StreamExtractor extractor = ServiceList.YouTube
                     .getStreamExtractor(youtubeUrl);
+            escribirProgreso(context, "3. Extractor creado. Haciendo fetchPage");
             extractor.fetchPage();
+            escribirProgreso(context, "4. fetchPage listo. Pidiendo StreamInfo");
 
             StreamInfo info = StreamInfo.getInfo(ServiceList.YouTube, youtubeUrl);
+            escribirProgreso(context, "5. StreamInfo obtenido. Buscando audioStreams");
             List<AudioStream> audioStreams = info.getAudioStreams();
+            escribirProgreso(context, "6. audioStreams obtenidos: " + (audioStreams == null ? "null" : audioStreams.size()));
 
             if (audioStreams == null || audioStreams.isEmpty()) {
                 callback.onError("No se encontraron pistas de audio para este video.");
@@ -94,10 +116,13 @@ public class YoutubeAudioHelper {
                     mejor = a;
                 }
             }
+            escribirProgreso(context, "7. Mejor audio elegido. Llamando onSuccess");
 
             callback.onSuccess(mejor.getContent(), info.getName());
+            escribirProgreso(context, "8. onSuccess completado sin errores");
 
         } catch (Throwable e) {
+            escribirProgreso(context, "ERROR: " + e.getClass().getSimpleName() + ": " + e.getMessage());
             callback.onError("Error al extraer audio: " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }

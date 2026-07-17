@@ -49,20 +49,36 @@ public class MainActivity extends AppCompatActivity implements DubbingEngine.Lis
     }
 
     private void mostrarUltimoErrorSiExiste() {
-        File archivo = new File(getFilesDir(), "ultimo_error.txt");
-        if (!archivo.exists()) return;
+        File archivoError = new File(getFilesDir(), "ultimo_error.txt");
+        File archivoProgreso = new File(getFilesDir(), "progreso.txt");
+        if (!archivoError.exists() && !archivoProgreso.exists()) return;
         try {
             StringBuilder contenido = new StringBuilder();
-            java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(archivo));
-            String linea;
-            while ((linea = br.readLine()) != null) {
-                contenido.append(linea).append("\n");
+            if (archivoProgreso.exists()) {
+                contenido.append("--- PROGRESO (ultimos pasos completados) ---\n");
+                java.io.BufferedReader br1 = new java.io.BufferedReader(new java.io.FileReader(archivoProgreso));
+                String linea1;
+                while ((linea1 = br1.readLine()) != null) {
+                    contenido.append(linea1).append("\n");
+                }
+                br1.close();
             }
-            br.close();
+            if (archivoError.exists()) {
+                contenido.append("\n--- ERROR CAPTURADO ---\n");
+                java.io.BufferedReader br2 = new java.io.BufferedReader(new java.io.FileReader(archivoError));
+                String linea2;
+                while ((linea2 = br2.readLine()) != null) {
+                    contenido.append(linea2).append("\n");
+                }
+                br2.close();
+            }
             new AlertDialog.Builder(this)
-                    .setTitle("La app se cerro la ultima vez. Este fue el error:")
+                    .setTitle("Diagnostico del ultimo intento")
                     .setMessage(contenido.toString())
-                    .setPositiveButton("OK", (d, w) -> archivo.delete())
+                    .setPositiveButton("OK", (d, w) -> {
+                        archivoError.delete();
+                        archivoProgreso.delete();
+                    })
                     .show();
         } catch (Exception ignored) {
         }
@@ -108,10 +124,12 @@ public class MainActivity extends AppCompatActivity implements DubbingEngine.Lis
                 return;
             }
             onEstado("Extrayendo audio del video...");
+            new File(getFilesDir(), "progreso.txt").delete();
+            YoutubeAudioHelper.escribirProgreso(this, "0. Boton presionado, url=" + url);
 
             executor.execute(() -> {
                 try {
-                    YoutubeAudioHelper.extraerAudio(url, new YoutubeAudioHelper.Callback() {
+                    YoutubeAudioHelper.extraerAudio(MainActivity.this, url, new YoutubeAudioHelper.Callback() {
                         @Override
                         public void onSuccess(String audioUrl, String videoTitle) {
                             runOnUiThread(() -> {
